@@ -63,7 +63,7 @@ fn main() -> Result<()> {
         },
     )?;
 
-    print_summary(&plan, &git.repo)?;
+    print_summary(&plan, &git.repo, args.quiet)?;
 
     let locals = plan.locals_to_delete();
     let remotes = plan.remotes_to_delete(&git.repo)?;
@@ -167,7 +167,7 @@ fn print(label: &str, mut branches: Vec<String>) {
 }
 
 #[allow(clippy::too_many_lines)]
-pub fn print_summary(plan: &TrimPlan, repo: &Repository) -> Result<()> {
+pub fn print_summary(plan: &TrimPlan, repo: &Repository, quiet: bool) -> Result<()> {
     println!("Branches that will remain:");
     println!("  local branches:");
 
@@ -201,49 +201,48 @@ pub fn print_summary(plan: &TrimPlan, repo: &Repository) -> Result<()> {
         }
     }
 
-    println!("  remote references:");
+    if !quiet {
+        println!("  remote references:");
 
-    let remote_refs_to_delete = HashSet::<_>::from_iter(plan.remotes_to_delete(repo)?);
-    let mut printed_remotes = HashSet::new();
+        let remote_refs_to_delete = HashSet::<_>::from_iter(plan.remotes_to_delete(repo)?);
 
-    for remote_ref in repo.branches(Some(BranchType::Remote))? {
-        let (branch, _) = remote_ref?;
-        if branch.get().symbolic_target_bytes().is_some() {
-            continue;
-        }
-        let refname = branch.get().name().context("non utf-8 remote ref name")?;
-        let shorthand = branch
-            .get()
-            .shorthand()
-            .context("non utf-8 remote ref name")?;
-
-        let upstream = RemoteTrackingBranch::new(refname);
-        let remote_branch = upstream.to_remote_branch(repo)?;
-
-        if remote_refs_to_delete.contains(&remote_branch) {
-            continue;
-        }
-
-        if let Some(preserved) = plan.get_preserved_upstream(&upstream) {
-            if preserved.base
-                && matches!(preserved.branch, ClassifiedBranch::MergedRemoteTracking(_))
-            {
-                println!("    {} [{}]", shorthand, preserved.reason);
-            } else {
-                println!(
-                    "    {} [{}, but: {}]",
-                    shorthand,
-                    preserved.branch.message_remote(),
-                    preserved.reason
-                );
+        for remote_ref in repo.branches(Some(BranchType::Remote))? {
+            let (branch, _) = remote_ref?;
+            if branch.get().symbolic_target_bytes().is_some() {
+                continue;
             }
-        } else if let Some(suggestion) = plan.skipped.get(refname) {
-            println!("    {} *{}", shorthand, suggestion.kind());
-        } else {
-            println!("    {shorthand}");
-        }
+            let refname = branch.get().name().context("non utf-8 remote ref name")?;
+            let shorthand = branch
+                .get()
+                .shorthand()
+                .context("non utf-8 remote ref name")?;
 
-        printed_remotes.insert(remote_branch);
+            let upstream = RemoteTrackingBranch::new(refname);
+            let remote_branch = upstream.to_remote_branch(repo)?;
+
+            if remote_refs_to_delete.contains(&remote_branch) {
+                continue;
+            }
+
+            if let Some(preserved) = plan.get_preserved_upstream(&upstream) {
+                if preserved.base
+                    && matches!(preserved.branch, ClassifiedBranch::MergedRemoteTracking(_))
+                {
+                    println!("    {} [{}]", shorthand, preserved.reason);
+                } else {
+                    println!(
+                        "    {} [{}, but: {}]",
+                        shorthand,
+                        preserved.branch.message_remote(),
+                        preserved.reason
+                    );
+                }
+            } else if let Some(suggestion) = plan.skipped.get(refname) {
+                println!("    {} *{}", shorthand, suggestion.kind());
+            } else {
+                println!("    {shorthand}");
+            }
+        }
     }
 
     for preserved in &plan.preserved {

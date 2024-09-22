@@ -23,6 +23,7 @@ pub struct Config {
     pub confirm: ConfigValue<bool>,
     pub detach: ConfigValue<bool>,
     pub delete: ConfigValue<DeleteFilter>,
+    pub quiet: ConfigValue<bool>,
 }
 
 impl Config {
@@ -66,8 +67,13 @@ impl Config {
             .with_explicit(non_empty(args.delete.clone()))
             .with_default(DeleteRange::merged_origin())
             .parses_and_collect::<DeleteFilter>()?;
+        let quiet = get(config, "trim.quiet")
+            .with_explicit(Some(args.quiet))
+            .with_default(false)
+            .read()?
+            .expect("has default");
 
-        Ok(Config {
+        Ok(Self {
             bases,
             protected,
             update,
@@ -75,6 +81,7 @@ impl Config {
             confirm,
             detach,
             delete,
+            quiet,
         })
     }
 }

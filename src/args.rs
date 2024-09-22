@@ -81,6 +81,11 @@ pub struct Args {
     /// Do not delete branches, show what branches will be deleted.
     #[clap(long)]
     pub dry_run: bool,
+
+    /// Emit less output.
+    /// [config: trim.quiet]
+    #[clap(long)]
+    pub quiet: bool,
 }
 
 impl Args {

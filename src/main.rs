@@ -260,7 +260,7 @@ pub fn print_summary(plan: &TrimPlan, repo: &Repository, quiet: bool) -> Result<
         }
     }
 
-    if !plan.skipped.is_empty() {
+    if !plan.skipped.is_empty() && !quiet {
         println!("  Some branches are skipped. Consider following to scan them:");
 
         let tracking = plan
@@ -330,6 +330,7 @@ pub fn print_summary(plan: &TrimPlan, repo: &Repository, quiet: bool) -> Result<
             );
         }
     }
+
     println!();
 
     let mut merged_locals = Vec::new();
